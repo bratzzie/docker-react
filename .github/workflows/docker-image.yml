@@ -11,8 +11,8 @@ jobs:
 
     steps:
     - name: Check out code
-    - uses: actions/checkout@v3
+      uses: actions/checkout@v3
     - name: Build docker images
-    - run: docker build -t bratzzie/docker-react -f Dockerfile.dev .
+      run: docker build -t bratzzie/docker-react -f Dockerfile.dev .
     - name: Run tests
-    - run: docker run -e CI=true bratzzie/docker-react npm run test -- --coverage
+      run: docker run -e CI=true bratzzie/docker-react npm run test -- --coverage
