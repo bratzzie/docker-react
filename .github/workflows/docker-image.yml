@@ -28,7 +28,9 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-
+      
+    - name: ech
+      run: echo ${{env.PIPELINE_ID}}
     - name: Checkout source code
       uses: actions/checkout@v2
 
