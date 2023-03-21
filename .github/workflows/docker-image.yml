@@ -2,6 +2,7 @@ name: Docker Image CI with AWS Elastic Beanstalk
 
 env:
   APP_NAME: docker-react
+  APP_ENV: Dockerreact-env
   S3_BUCKET: docker-react-studying
   AWS_REGION: eu-west-3
   AWS_PLATFORM: Docker
@@ -24,37 +25,23 @@ jobs:
     - name: Run tests
       run: docker run -e CI=true bratzzie/docker-react npm run test -- --coverage
 
-
-  create_eb_version:
+  build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - name: Configure AWS credentials 
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
-      - run: |
-          AWS_VERSION_LABEL=${{env.APP_NAME}}-${{env.PIPELINE_ID}}
 
-          echo "Creating Source Bundle"
-          zip -r ${{env.APP_NAME}}.zip app.js Dockerfile dockerignore package.json
-          S3_KEY="$AWS_VERSION_LABEL.zip"
+    - name: Checkout source code
+      uses: actions/checkout@v2
 
-          echo "Uploading Source Bundle to S3"
-          aws s3 cp ${{env.APP_NAME}}.zip s3://${{env.S3_BUCKET}}/${S3_KEY} --region ${{env.AWS_REGION}}
+    - name: Generate deployment package
+      run: zip -r ${{env.APP_NAME}}-${{env.PIPELINE_ID}}.zip . -x '*.git*'
 
-          echo "Creating Elastic Beanstalk version"
-          aws elasticbeanstalk create-application-version --application-name ${{env.APP_NAME}} --version-label $AWS_VERSION_LABEL --region ${{env.AWS_REGION}} --source-bundle S3Bucket=${{env.S3_BUCKET}},S3Key=${S3_KEY} --auto-create-application
-
-      - name: Deploy 
-        uses: einaregilsson/beanstalk-deploy@v16
-        with:
-          aws_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          application_name:  ${{env.APP_NAME}}
-          environment_name: Dockerreact-env
-          version_label: ${{env.APP_NAME}}-${{env.PIPELINE_ID}}
-          region: ${{env.AWS_REGION}}
-          deployment_package: ${{env.APP_NAME}}.zip
+    - name: Deploy to EB
+      uses: einaregilsson/beanstalk-deploy@v21
+      with:
+        aws_access_key: ${{secrets.AWS_ACCESS_KEY_ID}}
+        aws_secret_key: ${{secrets.AWS_SECRET_ACCESS_KEY}}
+        application_name: ${{env.APP_NAME}}
+        environment_name: ${{env.APP_ENV}}
+        version_label: ${{env.PIPELINE_ID}}
+        region: ${{env.AWS_REGION}}
+        deployment_package: ${{env.APP_NAME}}-${{env.PIPELINE_ID}}.zip
